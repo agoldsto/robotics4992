@@ -1,12 +1,8 @@
 #define DXL_BUS_SERIAL1 1 
 
 int index = 0;
-int pxval = 0;
-int cxval = 0;
-int adjxval = 0;
-float kp = 1;
-float pcomp = 0;
-float input = 0;
+float kp = 2;
+float u = 0;
 
 Dynamixel Dxl(DXL_BUS_SERIAL1);
 int inChar; // Where to store the character read
@@ -18,44 +14,29 @@ void setup() {
 
 void loop() {
   if(SerialUSB.available() > 0){
-    int inData[20];
     
     while(SerialUSB.available() > 0){
       
-      if(index < 19){
          inChar = SerialUSB.read();    
-         inData[index] = (int)inChar;
          
-         index++;
-         inData[index] = '\0'; //Null terminate the string
          
-          cxval = inData[index-1];
+          float k_theta = 80 - (int)inChar;
+          float e = u - k_theta;
+          float theta_dot = e*kp;
+          int dir = 0xFBFF;
+          int input = floor(abs(theta_dot));
           
-          adjxval = 80 - cxval;
-          pcomp = adjxval*kp;
-          input = pcomp;
-          
-          
-          SerialUSB.print("input = ");
-          SerialUSB.println(input);
-          
-          //'P' is int 80
-          if (input > 0){
-            Dxl.goalSpeed(1, 75 | 0x400);
+          if (input > 1023){
+            input = 1023;
           }
-          else if (input < 0){
-            Dxl.goalSpeed(1, 75);
+          //'P' is int 80
+          if (theta_dot <= 0){
+            Dxl.goalSpeed(1, input & dir);
           }
           else{
-            Dxl.goalSpeed(1, 0);
+            dir = 0x400;
+            Dxl.goalSpeed(1, input | dir);
           }
-          pxval = cxval;
-      }
-      index = 0;
-      
     }
-     
   }
-  delay(20);
 }
-
